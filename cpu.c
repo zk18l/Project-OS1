@@ -62,7 +62,7 @@ void main()
 
     for(i=0;i<resource;i++)
     {
-        available[i]=max_instance[j]-total[i];
+        available[i]=max_instance[i]-total[i];
     }
 
     printf("\n need = max - allocated \n");
