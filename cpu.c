@@ -5,7 +5,7 @@
 
 void main()
 {
-    int process, resource, i, instance, j, counter = 0, count = 0, temp = 0;
+    int process, resource, i, instance, j, process_counter = 0, count = 0, temp = 0;
     printf("\n\t\tEnter Number of Process : ");
     scanf("%d", &process);
     int system[process];
@@ -96,6 +96,7 @@ void main()
         {
             printf("\t %d", need[i][j]);
         }
+        usleep(700000);
     }
     printf("\n\n\t-------------------------------------------------------------------------------------\n");
     printf("\n");
@@ -109,11 +110,32 @@ void main()
             {
                 if (need[i][j] <= available[j])
                 {
-                    counter++;
+                    process_counter++;
                 }
             }
-            if (counter == resource && completed[i] == 0)
+            if (process_counter == resource && completed[i] == 0)
             {
+                printf("\t\tP[%d] will be executed because need[P%d]<=work\n", i, i);
+                printf("\t\tP[%d] will release the allocated resource", i);
+                printf("(");
+
+                printf("Work= Work(");
+                for (int k = 0; k < resource; k++)
+                {
+                    printf("%d", available[k]);
+                    if (k < resource - 1)
+                        printf(",");
+                }
+
+                printf(")+Allocated(P%d)(", i);
+
+                for (int k = 0; k < resource; k++)
+                {
+                    printf("%d", allocated[i][k]);
+                    if (k < resource - 1)
+                        printf(",");
+                }
+                printf(")\n");
                 system[countsys++] = i;
 
                 completed[i] = 1;
@@ -131,7 +153,12 @@ void main()
 
                 count++;
             }
-            counter = 0;
+            else
+            {
+                printf("\t\tP[%d] will not be executed because need[P%d]>work\n", i, i);
+            }
+            process_counter = 0;
+            usleep(700000);
         }
 
         if (count == temp)
