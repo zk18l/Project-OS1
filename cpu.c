@@ -167,7 +167,7 @@ void Parent_Process(int RFP, int P)
     }
     close(RFP);
 }
-void main()
+int main()
 {
     int process, resource, i, instance, j;
     int fd[2];
@@ -254,7 +254,7 @@ void main()
     if (!valid_input)
     {
         printf("\n\t\tInvalid input. Please restart the program and enter correct values.\n");
-        return;
+        return 0;
     }
 
     // Calculate the total allocated resources
@@ -314,4 +314,5 @@ void main()
 
     close(fd[1]);
     Parent_Process(fd[0], process);
+    return 0;
 }
