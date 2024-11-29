@@ -1,21 +1,188 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <stdlib.h>
 
+void Process_One(int WTP, int *arr, int R, int P) // pro row res col
+{
+    // Display the Need matrix
+    printf("\n\t\tneed = max - allocated \n");
+    printf("\n\t\t\tNeed Matrix");
+    printf("\n\n\t\tProcess");
+    int i, j, Temp[P][R];
+    for (i = 0; i < R; i++)
+    {
+        printf("\t R#%d", i);
+    }
+    for (i = 0; i < P; i++)
+    {
+        printf("\n\t\t p[%d] ", i);
+        for (j = 0; j < R; j++)
+        {
+            Temp[i][j] = *(arr + i * R + j);
+            printf("\t %d", Temp[i][j]);
+        }
+        usleep(700000);
+    }
+    write(WTP, Temp, sizeof(Temp));
+    close(WTP);
+    printf("\n\n\t-------------------------------------------------------------------------------------\n");
+    printf("\n");
+    exit(0);
+}
+void Process_Two(int RFP, int WTP, int *Av, int *Al, int *S, int *C, int R, int P)
+{
+    int need[P][R];
+    read(RFP, need, sizeof(need));
+    close(RFP);
+    int process_counter = 0, countsys = 0, count = 0, temp = 0, i, j;
+    int available[P], system[P], completed[P];
+    for (i = 0; i < R; i++)
+    {
+        available[i] = Av[i];
+    }
+    for (i = 0; i < R; i++)
+    {
+        system[i] = S[i];
+    }
+    for (i = 0; i < P; i++)
+    {
+        completed[i] = C[i];
+    }
+    int allocated[P][R];
+    for (i = 0; i < P; i++)
+    {
+        for (int j = 0; j < R; j++)
+        {
+            allocated[i][j] = *(Al + i * R + j);
+        }
+    }
+    // Banker's algorithm to find safe sequence
+    while (count != P)
+    {
+        temp = count;
+
+        // Check each process to see if it can be executed
+        for (i = 0; i < P; i++)
+        {
+            if (completed[i] == 0)
+            {
+                process_counter = 0;
+
+                // Check if all needs can be met with available resources
+                for (j = 0; j < R; j++)
+                {
+                    if (need[i][j] <= available[j]) // If the need of resource[i] can be fulfilled
+                    {
+                        process_counter++;
+                    }
+                }
+
+                // If all resources are available, execute the process
+                if (process_counter == R)
+                {
+                    printf("\t\tP[%d] will be executed because need[P%d]<=work\n", i, i);
+                    printf("\t\tP[%d] will release the allocated resource", i);
+                    printf("(");
+
+                    // Display Work = Available + Allocated
+                    printf("Work= Work(");
+                    for (int k = 0; k < R; k++)
+                    {
+                        printf("%d", available[k]);
+                        if (k < R - 1)
+                            printf(",");
+                    }
+
+                    printf(")+Allocated(P%d)(", i);
+
+                    for (int k = 0; k < R; k++)
+                    {
+                        printf("%d", allocated[i][k]);
+                        if (k < R - 1)
+                            printf(",");
+                    }
+                    printf(")\n");
+
+                    system[countsys++] = i;
+
+                    completed[i] = 1; // Mark process as completed
+                    for (j = 0; j < R; j++)
+                    {
+                        available[j] = available[j] + allocated[i][j]; // Update available resources
+                    }
+
+                    printf("\t\tWork Vector : ");
+                    for (j = 0; j < R; j++)
+                    {
+                        printf("%d ", available[j]);
+                    }
+                    printf("\n");
+
+                    count++;
+                }
+                else
+                {
+                    printf("\t\tP[%d] will not be executed because need[P%d]>work\n", i, i);
+                }
+            }
+            usleep(700000);
+        }
+
+        // If no progress is made in this cycle, break the loop (deadlock)
+        if (count == temp)
+        {
+            break;
+        }
+    }
+    write(WTP, &countsys, sizeof(int));
+    write(WTP, completed, sizeof(int) * P);
+    write(WTP, system, sizeof(int) * P);
+    close(WTP);
+    exit(0);
+}
+
+void Parent_Process(int RFP, int P)
+{
+    int countsys, completed[P], system[P], i;
+    read(RFP, &countsys, sizeof(int));
+    read(RFP, completed, sizeof(int) * P);
+    read(RFP, system, sizeof(int) * P);
+    // Output the safe sequence
+    printf("\n\t\tSafe Sequence: ");
+    for (i = 0; i < countsys; i++)
+    {
+        printf(" P[%d] ", system[i]);
+        if (i < countsys - 1)
+            printf("->");
+    }
+
+    // If some processes are not completed, display which ones
+    for (i = 0; i < P; i++)
+    {
+        if (completed[i] != 1)
+        {
+            printf("\n\n\t\t P[%d] not able to allocate", i);
+        }
+    }
+    close(RFP);
+}
 void main()
 {
-    int process, resource, i, instance, j, process_counter = 0, count = 0, temp = 0;
-    
+    int process, resource, i, instance, j;
+    int fd[2];
+    pipe(fd);
     // Get number of processes from the user
     printf("\n\t\tEnter Number of Process : ");
     scanf("%d", &process);
-    
+
     // Declare arrays for system states
     int system[process];
-    
+
     // Get number of resources from the user
     printf("\t\tEnter Number of Resources : ");
     scanf("%d", &resource);
-    
+
     // Declare matrices and arrays for resource allocation data
     int available[resource], max_instance[resource], max[process][resource], allocated[process][resource], need[process][resource], completed[process], total[resource];
 
@@ -36,7 +203,7 @@ void main()
     }
 
     printf("\n\t-------------------------------------------------------------------------------------\n");
-    
+
     // Get maximum resources each process can request
     printf("\n\t\tEnter MAXIMUM instance for a Process & its corresponding resource :\n");
     for (i = 0; i < process; i++)
@@ -51,7 +218,7 @@ void main()
     }
 
     printf("\n\t-------------------------------------------------------------------------------------\n");
-    
+
     // Get the allocated resources for each process
     printf("\n\t\tEnter instance ALLOCATED for a Process & its corresponding resource :\n");
     for (i = 0; i < process; i++)
@@ -99,7 +266,7 @@ void main()
         }
     }
 
-    // Calculate the available 
+    // Calculate the available
     for (i = 0; i < resource; i++)
     {
         available[i] = max_instance[i] - total[i];
@@ -115,130 +282,36 @@ void main()
         fflush(stdout);
         usleep(200000);
 
+        printf("\r\t\tprocessing |");
+        fflush(stdout);
+        usleep(200000);
+
         printf("\r\t\tprocessing \\");
+        fflush(stdout);
+        usleep(200000);
+
+        printf("\r\t\tprocessing -");
         fflush(stdout);
         usleep(200000);
 
         elapsed++;
     }
     printf("\n");
-    
-    // Display the Need matrix 
-    printf("\n\t\tneed = max - allocated \n");
-    printf("\n\t\t\tNeed Matrix");
-    printf("\n\n\t\tProcess");
-    for (i = 0; i < resource; i++)
+
+    pid_t Pid_P_One = fork();
+    if (Pid_P_One == 0)
     {
-        printf("\t R#%d", i);
+        // Child one process
+        close(fd[0]);
+        Process_One(fd[1], (int *)need, resource, process);
     }
-    for (i = 0; i < process; i++)
+    pid_t Pid_P_Two = fork();
+    if (Pid_P_Two == 0)
     {
-        printf("\n\t\t p[%d] ", i);
-        for (j = 0; j < resource; j++)
-        {
-            printf("\t %d", need[i][j]);
-        }
-        usleep(700000);
-    }
-    printf("\n\n\t-------------------------------------------------------------------------------------\n");
-    printf("\n");
-
-    // Banker's algorithm to find safe sequence
-    int countsys = 0;
-    while (count != process)
-    {
-        temp = count;
-        
-        // Check each process to see if it can be executed
-        for (i = 0; i < process; i++)
-        {
-            if (completed[i] == 0)
-            {
-                process_counter = 0;
-                
-                // Check if all needs can be met with available resources
-                for (j = 0; j < resource; j++)
-                {
-                    if (need[i][j] <= available[j]) // If the need of resource[i] can be fulfilled
-                    {
-                        process_counter++;
-                    }
-                }
-
-                // If all resources are available, execute the process
-                if (process_counter == resource)
-                {
-                    printf("\t\tP[%d] will be executed because need[P%d]<=work\n", i, i);
-                    printf("\t\tP[%d] will release the allocated resource", i);
-                    printf("(");
-
-                    // Display Work = Available + Allocated
-                    printf("Work= Work(");
-                    for (int k = 0; k < resource; k++)
-                    {
-                        printf("%d", available[k]);
-                        if (k < resource - 1)
-                            printf(",");
-                    }
-
-                    printf(")+Allocated(P%d)(", i);
-
-                    for (int k = 0; k < resource; k++)
-                    {
-                        printf("%d", allocated[i][k]);
-                        if (k < resource - 1)
-                            printf(",");
-                    }
-                    printf(")\n");
-
-                    system[countsys++] = i;
-
-                    completed[i] = 1; // Mark process as completed
-                    for (j = 0; j < resource; j++)
-                    {
-                        available[j] = available[j] + allocated[i][j]; // Update available resources
-                    }
-
-                    printf("\t\tWork Vector : ");
-                    for (j = 0; j < resource; j++)
-                    {
-                        printf("%d ", available[j]);
-                    }
-                    printf("\n");
-
-                    count++;
-                }
-                else
-                {
-                    printf("\t\tP[%d] will not be executed because need[P%d]>work\n", i, i);
-                }
-            }
-            usleep(700000);
-        }
-
-        // If no progress is made in this cycle, break the loop (deadlock)
-        if (count == temp)
-        {
-            break;
-        }
+        // child two process
+        Process_Two(fd[0], fd[1], available, (int *)allocated, system, completed, resource, process);
     }
 
-    // Output the safe sequence
-    printf("\n\t\tSafe Sequence: ");
-    for (i = 0; i < countsys; i++)
-    {
-        printf(" P[%d] ", system[i]);
-        if (i < countsys - 1)
-            printf("->");
-    }
-    
-    // If some processes are not completed, display which ones
-    for (i = 0; i < process; i++)
-    {
-        if (completed[i] != 1)
-        {
-            printf("\n\n\t\t P[%d] not able to allocate", i);
-        }
-    }
-    printf("\n");
+    close(fd[1]);
+    Parent_Process(fd[0], process);
 }

@@ -1,0 +1,85 @@
+./test
+
+		Enter Number of Process : 5
+		Enter Number of Resources : 3
+
+		Enter Number of Max Instances for each resource
+
+		Resources[0] : 10 5 7
+		Resources[1] : 		Resources[2] : 
+	-------------------------------------------------------------------------------------
+
+		Enter MAXIMUM instance for a Process & its corresponding resource :
+
+		For Process[0] 
+			Resource[0] : 7 5 3
+			Resource[1] : 			Resource[2] : 
+		For Process[1] 
+			Resource[0] : 3 2 2
+			Resource[1] : 			Resource[2] : 
+		For Process[2] 
+			Resource[0] : 9 0 2
+			Resource[1] : 			Resource[2] : 
+		For Process[3] 
+			Resource[0] : 2 2 2
+			Resource[1] : 			Resource[2] : 
+		For Process[4] 
+			Resource[0] : 4 3 3
+			Resource[1] : 			Resource[2] : 
+	-------------------------------------------------------------------------------------
+
+		Enter instance ALLOCATED for a Process & its corresponding resource :
+
+		For Process[0] 
+			Resource[0] : 0 1 0
+			Resource[1] : 			Resource[2] : 
+		For Process[1] 
+			Resource[0] : 2 0 0
+			Resource[1] : 			Resource[2] : 
+		For Process[2] 
+			Resource[0] : 3 0 2
+			Resource[1] : 			Resource[2] : 
+		For Process[3] 
+			Resource[0] : 2 1 1
+			Resource[1] : 			Resource[2] : 
+		For Process[4] 
+			Resource[0] : 0 0 2
+			Resource[1] : 			Resource[2] : 
+	-------------------------------------------------------------------------------------
+
+		Checking if maximum values are valid...
+
+		processing \
+
+		need = max - allocated 
+
+			Need Matrix
+
+		Process	 R#0	 R#1	 R#2
+		 p[0] 	 7	 4	 3
+		 p[1] 	 1	 2	 2
+		 p[2] 	 6	 0	 0
+		 p[3] 	 0	 1	 1
+		 p[4] 	 4	 3	 1
+
+	-------------------------------------------------------------------------------------
+
+		P[0] will not be executed because need[P0]>work
+		P[1] will be executed because need[P1]<=work
+		P[1] will release the allocated resource(Work= Work(3,3,2)+Allocated(P1)(2,0,0)
+		Work Vector : 5 3 2 
+		P[2] will not be executed because need[P2]>work
+		P[3] will be executed because need[P3]<=work
+		P[3] will release the allocated resource(Work= Work(5,3,2)+Allocated(P3)(2,1,1)
+		Work Vector : 7 4 3 
+		P[4] will be executed because need[P4]<=work
+		P[4] will release the allocated resource(Work= Work(7,4,3)+Allocated(P4)(0,0,2)
+		Work Vector : 7 4 5 
+		P[0] will be executed because need[P0]<=work
+		P[0] will release the allocated resource(Work= Work(7,4,5)+Allocated(P0)(0,1,0)
+		Work Vector : 7 5 5 
+		P[2] will be executed because need[P2]<=work
+		P[2] will release the allocated resource(Work= Work(7,5,5)+Allocated(P2)(3,0,2)
+		Work Vector : 10 5 7 
+
+		Safe Sequence:  P[1] -> P[3] -> P[4] -> P[0] -> P[2] 
