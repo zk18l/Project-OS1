@@ -2,14 +2,15 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 
-void Process_One(int WTP, int *arr, int R, int P) // pro row res col
+void Process_One(int WTP, int *N, int R, int P) // pro row res col
 {
     // Display the Need matrix
     printf("\n\t\tneed = max - allocated \n");
     printf("\n\t\t\tNeed Matrix");
     printf("\n\n\t\tProcess");
-    int i, j, Temp[P][R];
+    int i, j;
     for (i = 0; i < R; i++)
     {
         printf("\t R#%d", i);
@@ -19,12 +20,11 @@ void Process_One(int WTP, int *arr, int R, int P) // pro row res col
         printf("\n\t\t p[%d] ", i);
         for (j = 0; j < R; j++)
         {
-            Temp[i][j] = *(arr + i * R + j);
-            printf("\t %d", Temp[i][j]);
+            printf("\t %d", *(N + i * R + j));
         }
         usleep(700000);
     }
-    write(WTP, Temp, sizeof(Temp));
+    write(WTP, N, sizeof(int) * P * R);
     close(WTP);
     printf("\n\n\t-------------------------------------------------------------------------------------\n");
     printf("\n");
@@ -33,22 +33,10 @@ void Process_One(int WTP, int *arr, int R, int P) // pro row res col
 void Process_Two(int RFP, int WTP, int *Av, int *Al, int *S, int *C, int R, int P)
 {
     int need[P][R];
-    read(RFP, need, sizeof(need));
+    read(RFP, need, sizeof(int) * P * R);
     close(RFP);
     int process_counter = 0, countsys = 0, count = 0, temp = 0, i, j;
-    int available[P], system[P], completed[P];
-    for (i = 0; i < R; i++)
-    {
-        available[i] = Av[i];
-    }
-    for (i = 0; i < R; i++)
-    {
-        system[i] = S[i];
-    }
-    for (i = 0; i < P; i++)
-    {
-        completed[i] = C[i];
-    }
+    
     int allocated[P][R];
     for (i = 0; i < P; i++)
     {
@@ -65,14 +53,14 @@ void Process_Two(int RFP, int WTP, int *Av, int *Al, int *S, int *C, int R, int 
         // Check each process to see if it can be executed
         for (i = 0; i < P; i++)
         {
-            if (completed[i] == 0)
+            if (C[i] == 0)
             {
                 process_counter = 0;
 
                 // Check if all needs can be met with available resources
                 for (j = 0; j < R; j++)
                 {
-                    if (need[i][j] <= available[j]) // If the need of resource[i] can be fulfilled
+                    if (need[i][j] <= Av[j]) // If the need of resource[i] can be fulfilled
                     {
                         process_counter++;
                     }
@@ -89,7 +77,7 @@ void Process_Two(int RFP, int WTP, int *Av, int *Al, int *S, int *C, int R, int 
                     printf("Work= Work(");
                     for (int k = 0; k < R; k++)
                     {
-                        printf("%d", available[k]);
+                        printf("%d", Av[k]);
                         if (k < R - 1)
                             printf(",");
                     }
@@ -104,18 +92,18 @@ void Process_Two(int RFP, int WTP, int *Av, int *Al, int *S, int *C, int R, int 
                     }
                     printf(")\n");
 
-                    system[countsys++] = i;
+                    S[countsys++] = i;
 
-                    completed[i] = 1; // Mark process as completed
+                    C[i] = 1; // Mark process as completed
                     for (j = 0; j < R; j++)
                     {
-                        available[j] = available[j] + allocated[i][j]; // Update available resources
+                        Av[j] = Av[j] + allocated[i][j]; // Update available resources
                     }
 
                     printf("\t\tWork Vector : ");
                     for (j = 0; j < R; j++)
                     {
-                        printf("%d ", available[j]);
+                        printf("%d ", Av[j]);
                     }
                     printf("\n");
 
@@ -136,14 +124,15 @@ void Process_Two(int RFP, int WTP, int *Av, int *Al, int *S, int *C, int R, int 
         }
     }
     write(WTP, &countsys, sizeof(int));
-    write(WTP, completed, sizeof(int) * P);
-    write(WTP, system, sizeof(int) * P);
+    write(WTP, C, sizeof(int) * P);
+    write(WTP, S, sizeof(int) * P);
     close(WTP);
     exit(0);
 }
 
 void Parent_Process(int RFP, int P)
 {
+    wait(NULL);
     int countsys, completed[P], system[P], i;
     read(RFP, &countsys, sizeof(int));
     read(RFP, completed, sizeof(int) * P);
@@ -312,6 +301,7 @@ int main()
         Process_Two(fd[0], fd[1], available, (int *)allocated, system, completed, resource, process);
     }
 
+    
     close(fd[1]);
     Parent_Process(fd[0], process);
     return 0;
